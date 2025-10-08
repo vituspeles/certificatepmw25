@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CERTIFICATE GENERATOR</title>
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f3f3f3;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-bottom: 20px;
+      font-size: 26px;
+      font-weight: 700;
+      text-align: center;
+    }
+
+    .controls {
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    input[type="text"] {
+      padding: 10px 15px;
+      font-size: 18px;
+      width: 320px;
+      max-width: 90%;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      outline: none;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-top: 15px;
+      border: none;
+      background-color: #007bff;
+      color: #fff;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.3s;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .note {
+      font-size: 14px;
+      color: #777;
+      margin-top: 8px;
+    }
+
+    .certificate-container {
+      position: relative;
+      display: inline-block;
+      width: 800px;
+      max-width: 90%;
+      border: 2px solid #ddd;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      margin-top: 20px;
+    }
+
+    #certificateImage {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+
+    #namePreview {
+      position: absolute;
+      left: 50%;
+      top: 53%;
+      transform: translate(-50%, -50%);
+      font-size: 30px;
+      font-weight: 600;
+      color: #000;
+      font-family: 'Poppins', sans-serif;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>PMW25 CERTIFICATE GENERATOR</h1>
+
+  <div class="controls">
+    <input type="text" id="nameInput" placeholder="Enter your name..." />
+    <br />
+    <button id="downloadBtn">Download Certificate</button>
+    <div class="note">(Click the button or the certificate image to download)</div>
+  </div>
+
+  <div class="certificate-container" id="certificateContainer">
+    <img id="certificateImage" src="CERTIFICATES.jpg" alt="Certificate" />
+    <div id="namePreview">Your Name</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+  <script>
+    const nameInput = document.getElementById("nameInput");
+    const namePreview = document.getElementById("namePreview");
+    const downloadBtn = document.getElementById("downloadBtn");
+    const certificateContainer = document.getElementById("certificateContainer");
+    const certificateImage = document.getElementById("certificateImage");
+
+    // Live preview of name
+    nameInput.addEventListener("input", () => {
+      namePreview.textContent = nameInput.value || "Your Name";
+    });
+
+    // Function to download certificate
+    function downloadCertificate() {
+      // Ensure the image is fully loaded before capturing
+      if (!certificateImage.complete) {
+        certificateImage.onload = () => downloadCertificate();
+        return;
+      }
+      html2canvas(certificateContainer, {useCORS: true, allowTaint: true}).then(canvas => {
+        const link = document.createElement("a");
+        link.download = `${nameInput.value || "certificate"}.jpg`;
+        link.href = canvas.toDataURL("image/jpeg", 1.0);
+        link.click();
+      });
+    }
+
+    // Trigger download on button click
+    downloadBtn.addEventListener("click", downloadCertificate);
+
+    // Trigger download when clicking the certificate image
+    certificateContainer.addEventListener("click", downloadCertificate);
+  </script>
+</body>
+</html>
