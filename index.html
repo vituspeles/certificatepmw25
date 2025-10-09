@@ -1,176 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PMW25 Certificate Generator</title>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
 <style>
-  body { font-family: 'Poppins', sans-serif; background: #f3f3f3; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }
-  h1 { font-size: 26px; font-weight: 700; text-align: center; margin-bottom: 20px; }
-  .page { display: none; flex-direction: column; align-items: center; }
-  .active { display: flex; }
-  input[type="text"] { padding: 10px 15px; font-size: 18px; width: 320px; border: 1px solid #ccc; border-radius: 6px; outline: none; margin-bottom: 10px; }
-  button { padding: 10px 20px; font-size: 16px; border: none; background-color: #007bff; color: #fff; border-radius: 6px; cursor: pointer; transition: background 0.3s; margin-top: 10px; }
-  button:hover { background-color: #0056b3; }
-  .certificate-container { position: relative; width: 100%; max-width: 1500px; border: 2px solid #ddd; background: #fff; box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); margin-top: 20px; }
-  #certificateImage { width: 100%; height: auto; display: block; }
-  #namePreview { 
-    position: absolute; 
-    left: 50%; 
-    top: 53%; 
-    transform: translate(-50%, -50%);
-    font-size: clamp(13px, 3vw, 40px); /* responsive font size */
-    font-weight: 530; 
-    color: #000; git
-    text-align: center; 
-    white-space: nowrap; 
-  }
-  .note { font-size: 14px; color: #777; margin-top: 8px; text-align: center; }
-  #pmiLogo { width: 120px; margin-bottom: 20px; }
-  #validationFeedback { margin-top: 5px; font-size: 16px; }
-  .valid { color: green; }
-  .invalid { color: red; }
+body { font-family:'Poppins',sans-serif; background:#f3f3f3; display:flex; flex-direction:column; align-items:center; justify-content:center; min-height:100vh; margin:0; padding:20px;}
+h1 { font-size:26px; font-weight:700; margin-bottom:20px; text-align:center;}
+.page { display:none; flex-direction:column; align-items:center;}
+.active { display:flex;}
+input[type=text]{padding:10px 15px; font-size:18px; width:320px; margin-bottom:10px; border-radius:6px; border:1px solid #ccc;}
+button{padding:10px 20px; font-size:16px; border:none; border-radius:6px; background:#007bff; color:#fff; cursor:pointer; margin-top:10px;}
+button:hover{background:#0056b3;}
+.certificate-container{position:relative; width:100%; max-width:1500px; border:2px solid #ddd; background:#fff; box-shadow:0 0 10px rgba(0,0,0,0.1); margin-top:20px;}
+#certificateImage{width:100%; display:block;}
+#namePreview{position:absolute; left:50%; top:53%; transform:translate(-50%,-50%); font-size:clamp(13px,3vw,40px); font-weight:530; text-align:center; white-space:nowrap;}
+#pmiLogo{width:120px; margin-bottom:20px;}
+#validationFeedback{margin-top:5px; font-size:16px;}
+.valid{color:green;}
+.invalid{color:red;}
 </style>
 </head>
 <body>
-<img src="./pmi logo.png" id="pmiLogo" alt="PMI Logo">
+
+<img src="pmi logo.png" id="pmiLogo">
 <h1>PMW25 Certificate Generator</h1>
 
-<!-- Step 1: Validation Page -->
 <div class="page active" id="validationPage">
-  <label>Enter your name for validation </label>
-  <input type="text" id="validateNameInput" placeholder="Eg. Vitus Watson" />
-  <button id="validateBtn">Validate</button>
-  <div id="validationFeedback"></div>
+<label>Enter your name for validation</label>
+<input type="text" id="validateNameInput" placeholder="Eg. Vitus Watson"/>
+<button id="validateBtn">Validate</button>
+<div id="validationFeedback"></div>
 </div>
 
-<!-- Step 2: Certificate Page -->
 <div class="page" id="certificatePage">
-  <input type="text" id="certNameInput" placeholder="Enter the name for your certificate" />
-  <label>Check the preview below, If names look well on certificate download here</label>
-  <button id="downloadBtn">Download Certificate</button>
-  
+<input type="text" id="certNameInput" placeholder="Enter name for certificate"/>
+<button id="downloadBtn">Download Certificate</button>
 
-  <div class="certificate-container" id="certificateContainer">
-    <img id="certificateImage" src="./CERTIFICATES.jpg" alt="Certificate Template" />
-    <div id="namePreview">Your Name</div>
-  </div>
+<div class="certificate-container">
+<img id="certificateImage" src="CERTIFICATES.jpg">
+<div id="namePreview">Your Name</div>
+</div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script>
-const validationPage = document.getElementById("validationPage");
-const certificatePage = document.getElementById("certificatePage");
-const validateNameInput = document.getElementById("validateNameInput");
-const certNameInput = document.getElementById("certNameInput");
-const validateBtn = document.getElementById("validateBtn");
-const downloadBtn = document.getElementById("downloadBtn");
-const certificateContainer = document.getElementById("certificateContainer");
-const namePreview = document.getElementById("namePreview");
-const feedback = document.getElementById("validationFeedback");
-
 let participants = [];
+let downloaded = JSON.parse(localStorage.getItem('pmw25_downloaded')||'[]');
 
 // Load CSV
-Papa.parse('./participants.csv', {
-  download: true,
-  header: true,
-  skipEmptyLines: true,
-  delimiter: ";",
-  complete: function(results) {
-    participants = results.data
-      .map(row => (row.name || '').trim().toLowerCase())
-      .filter(n => n.length > 0);
-    console.log("Participants loaded:", participants);
-  }
+Papa.parse("participants.csv", {
+    download:true,
+    header:true,
+    skipEmptyLines:true,
+    delimiter:";",
+    complete:function(results){
+        participants = results.data.map(r => (r.name||'').trim().toLowerCase());
+        console.log("Participants:", participants);
+    }
 });
 
-// Normalize name
-function normalizeName(name) {
-  return name.toLowerCase().replace(/\s+/g, ' ').trim();
+function normalizeName(name){return name.toLowerCase().replace(/\s+/g,' ').trim();}
+
+function isValidParticipant(name){
+    const words = normalizeName(name).split(' ').filter(w => !['dr','eng','mr','ms','mrs'].includes(w));
+    return participants.some(p=>{
+        const pw = normalizeName(p).split(' ').filter(w=>!['dr','eng','mr','ms','mrs'].includes(w));
+        return words.every(w=>pw.includes(w));
+    });
 }
 
-// Flexible validation function
-function isValidParticipant(inputName) {
-  const inputWords = normalizeName(inputName).split(' ').filter(w => w && !['dr','eng','mr','ms','mrs'].includes(w));
-  return participants.some(participant => {
-    const participantWords = normalizeName(participant).split(' ').filter(w => w && !['dr','eng','mr','ms','mrs'].includes(w));
-    return inputWords.every(word => participantWords.includes(word));
-  });
-}
+const validateBtn = document.getElementById("validateBtn");
+const validateNameInput = document.getElementById("validateNameInput");
+const feedback = document.getElementById("validationFeedback");
+const validationPage = document.getElementById("validationPage");
+const certificatePage = document.getElementById("certificatePage");
+const certNameInput = document.getElementById("certNameInput");
+const namePreview = document.getElementById("namePreview");
+const downloadBtn = document.getElementById("downloadBtn");
 
-// Step 1: Validate participant
-validateBtn.addEventListener("click", () => {
-  const enteredName = validateNameInput.value.trim();
-  feedback.textContent = '';
+let attempts = {};
 
-  if (!enteredName) {
-    feedback.textContent = "Please enter your name.";
-    feedback.className = "invalid";
-    return;
-  }
+validateBtn.addEventListener("click", ()=>{
+    const name = validateNameInput.value.trim();
+    const nName = normalizeName(name);
+    feedback.textContent='';
 
-  // Check if already downloaded
-  let downloaded = JSON.parse(localStorage.getItem('pmw25_downloaded')) || [];
-  if (downloaded.includes(normalizeName(enteredName))) {
-    feedback.textContent = "You have already gotten your certificate.";
-    feedback.className = "invalid";
-    return;
-  }
+    if(!name){feedback.textContent='Enter your name'; feedback.className='invalid'; return;}
+    if(downloaded.includes(nName)){feedback.textContent='Already downloaded'; feedback.className='invalid'; return;}
+    if(!attempts[nName]) attempts[nName]=0;
+    if(attempts[nName]>=2){feedback.textContent='Too many attempts'; feedback.className='invalid'; return;}
+    if(!isValidParticipant(name)){attempts[nName]++; localStorage.setItem('pmw25_attempts',JSON.stringify(attempts)); feedback.textContent='Name not found'; feedback.className='invalid'; return;}
 
-  if (!isValidParticipant(enteredName)) {
-    feedback.textContent = "Name not found. Enter 1-3 words exactly from your registered name.";
-    feedback.className = "invalid";
-    return;
-  }
-
-  // Passed validation → show green check
-  feedback.textContent = "Name validated ✔";
-  feedback.className = "valid";
-
-  // Move to certificate page after short delay
-  setTimeout(() => {
-    validationPage.classList.remove('active');
-    certificatePage.classList.add('active');
-    certNameInput.value = '';           // input empty
-    namePreview.textContent = 'Your Name'; // reset preview
-    downloadBtn.style.display = 'inline-block';
-    feedback.textContent = '';
-    validateNameInput.value = '';
-  }, 800);
+    // Successful
+    feedback.textContent='Name validated ✔'; feedback.className='valid';
+    setTimeout(()=>{
+        validationPage.classList.remove('active');
+        certificatePage.classList.add('active');
+        certNameInput.value='';
+        namePreview.textContent='Your Name';
+    },500);
 });
 
-// Step 2: Update certificate name live
-certNameInput.addEventListener("input", () => {
-  namePreview.textContent = certNameInput.value || "Your Name";
-});
+certNameInput.addEventListener("input",()=>{namePreview.textContent=certNameInput.value||'Your Name';});
 
-// Download certificate
-downloadBtn.addEventListener("click", () => {
-  const enteredName = certNameInput.value.trim();
-  if (!enteredName) return;
+downloadBtn.addEventListener("click",()=>{
+    const name = certNameInput.value.trim();
+    if(!name) return;
+    html2canvas(document.querySelector('.certificate-container'),{scale:4}).then(canvas=>{
+        const link = document.createElement('a');
+        link.download=name.replace(/[^a-z0-9]/gi,'_')+'.jpg';
+        link.href=canvas.toDataURL('image/jpeg',1.0);
+        link.click();
 
-  html2canvas(certificateContainer, { scale: 4 }).then(canvas => {
-    const safeName = enteredName.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-    const link = document.createElement("a");
-    link.download = `${safeName || "certificate"}.jpg`;
-    link.href = canvas.toDataURL("image/jpeg", 1.0);
-    link.click();
+        // mark as downloaded
+        downloaded.push(normalizeName(name));
+        localStorage.setItem('pmw25_downloaded',JSON.stringify(downloaded));
 
-    // Mark as downloaded
-    let downloaded = JSON.parse(localStorage.getItem('pmw25_downloaded')) || [];
-    downloaded.push(normalizeName(enteredName));
-    localStorage.setItem('pmw25_downloaded', JSON.stringify(downloaded));
+        // open fresh thank-you page
+        const ty = window.open('','_blank','width=500,height=300');
+        ty.document.write('<html><head><title></title><style>body{display:flex;justify-content:center;align-items:center;height:100vh;font-family:Poppins,sans-serif;background:#f3f3f3;margin:0;}h1{text-align:center;color:#007bff;}</style></head><body><h1>Thank you for participating PMW25!</h1></body></html>');
+        ty.document.close();
 
-    alert("Thank you for participating PMW25!");
-
-    // Reset to validation page
-    certificatePage.classList.remove('active');
-    validationPage.classList.add('active');
-  });
+        certificatePage.classList.remove('active');
+        validationPage.classList.add('active');
+    });
 });
 </script>
 </body>
