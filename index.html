@@ -20,30 +20,24 @@ button:hover{background:#0056b3;}
 #validationFeedback{margin-top:5px; font-size:16px;}
 .valid{color:green;}
 .invalid{color:red;}
-#thankYouMsg{display:none; margin-top:15px; font-size:18px; font-weight:600; color:#007bff;}
 </style>
 </head>
 <body>
-
 <img src="pmi logo.png" id="pmiLogo">
 <h1>PMW25 Certificate Generator</h1>
-
 <div class="page active" id="validationPage">
-<label>Enter your name for validation</label>
-<input type="text" id="validateNameInput" placeholder="Eg. Vitus Watson"/>
-<button id="validateBtn">Validate</button>
-<div id="validationFeedback"></div>
+  <label>Enter your name for validation</label>
+  <input type="text" id="validateNameInput" placeholder="Eg. Vitus Watson"/>
+  <button id="validateBtn">Validate</button>
+  <div id="validationFeedback"></div>
 </div>
-
 <div class="page" id="certificatePage">
-<input type="text" id="certNameInput" placeholder="Enter name for certificate"/>
-<button id="downloadBtn">Download Certificate</button>
-
-<div class="certificate-container">
-<img id="certificateImage" src="CERTIFICATES.jpg">
-<div id="namePreview">Your Name</div>
-</div>
-<div id="thankYouMsg">Thank you for participating PMW25!</div>
+  <input type="text" id="certNameInput" placeholder="Enter name for certificate"/>
+  <button id="downloadBtn">Download Certificate</button>
+  <div class="certificate-container">
+    <img id="certificateImage" src="CERTIFICATES.jpg">
+    <div id="namePreview">Your Name</div>
+  </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
@@ -51,28 +45,27 @@ button:hover{background:#0056b3;}
 <script>
 let participants = [];
 let downloaded = JSON.parse(localStorage.getItem('pmw25_downloaded')||'[]');
-let attempts = JSON.parse(localStorage.getItem('pmw25_attempts')||'{}');
 
 // Load CSV
 Papa.parse("participants.csv", {
-    download:true,
-    header:true,
-    skipEmptyLines:true,
-    delimiter:";",
-    complete:function(results){
-        participants = results.data.map(r => (r.name||'').trim().toLowerCase());
-        console.log("Participants:", participants);
-    }
+  download:true,
+  header:true,
+  skipEmptyLines:true,
+  delimiter:";",
+  complete:function(results){
+    participants = results.data.map(r => (r.name||'').trim().toLowerCase());
+    console.log("Participants:", participants);
+  }
 });
 
 function normalizeName(name){return name.toLowerCase().replace(/\s+/g,' ').trim();}
 
 function isValidParticipant(name){
-    const words = normalizeName(name).split(' ').filter(w => !['dr','eng','mr','ms','mrs'].includes(w));
-    return participants.some(p=>{
-        const pw = normalizeName(p).split(' ').filter(w=>!['dr','eng','mr','ms','mrs'].includes(w));
-        return words.every(w=>pw.includes(w));
-    });
+  const words = normalizeName(name).split(' ').filter(w => !['dr','eng','mr','ms','mrs'].includes(w));
+  return participants.some(p=>{
+    const pw = normalizeName(p).split(' ').filter(w=>!['dr','eng','mr','ms','mrs'].includes(w));
+    return words.every(w=>pw.includes(w));
+  });
 }
 
 const validateBtn = document.getElementById("validateBtn");
@@ -83,53 +76,61 @@ const certificatePage = document.getElementById("certificatePage");
 const certNameInput = document.getElementById("certNameInput");
 const namePreview = document.getElementById("namePreview");
 const downloadBtn = document.getElementById("downloadBtn");
-const thankYouMsg = document.getElementById("thankYouMsg");
+
+let attempts = {};
 
 validateBtn.addEventListener("click", ()=>{
-    const name = validateNameInput.value.trim();
-    const nName = normalizeName(name);
-    feedback.textContent='';
+  const name = validateNameInput.value.trim();
+  const nName = normalizeName(name);
+  feedback.textContent='';
+  if(!name){feedback.textContent='Enter your name'; feedback.className='invalid'; return;}
+  if(downloaded.includes(nName)){feedback.textContent='Already downloaded'; feedback.className='invalid'; return;}
+  if(!attempts[nName]) attempts[nName]=0;
+  if(attempts[nName]>=2){feedback.textContent='Too many attempts'; feedback.className='invalid'; return;}
+  if(!isValidParticipant(name)){
+    attempts[nName]++;
+    localStorage.setItem('pmw25_attempts',JSON.stringify(attempts));
+    feedback.textContent='Name not found';
+    feedback.className='invalid';
+    return;
+  }
 
-    if(!name){feedback.textContent='Enter your name'; feedback.className='invalid'; return;}
-    if(downloaded.includes(nName)){feedback.textContent='Already downloaded'; feedback.className='invalid'; return;}
-    if(!attempts[nName]) attempts[nName]=0;
-    if(attempts[nName]>=2){feedback.textContent='Too many attempts'; feedback.className='invalid'; return;}
-    if(!isValidParticipant(name)){attempts[nName]++; localStorage.setItem('pmw25_attempts',JSON.stringify(attempts)); feedback.textContent='Name not found'; feedback.className='invalid'; return;}
-
-    // Successful
-    feedback.textContent='Name validated ✔'; feedback.className='valid';
-    setTimeout(()=>{
-        validationPage.classList.remove('active');
-        certificatePage.classList.add('active');
-        certNameInput.value='';
-        namePreview.textContent='Your Name';
-    },500);
+  // Successful
+  feedback.textContent='Name validated ✔';
+  feedback.className='valid';
+  setTimeout(()=>{
+    validationPage.classList.remove('active');
+    certificatePage.classList.add('active');
+    certNameInput.value='';
+    namePreview.textContent='Your Name';
+  },500);
 });
 
-certNameInput.addEventListener("input",()=>{namePreview.textContent=certNameInput.value||'Your Name';});
+certNameInput.addEventListener("input",()=>{
+  namePreview.textContent=certNameInput.value||'Your Name';
+});
 
 downloadBtn.addEventListener("click",()=>{
-    const name = certNameInput.value.trim();
-    if(!name) return;
-    html2canvas(document.querySelector('.certificate-container'),{scale:4}).then(canvas=>{
-        const link = document.createElement('a');
-        link.download=name.replace(/[^a-z0-9]/gi,'_')+'.jpg';
-        link.href=canvas.toDataURL('image/jpeg',1.0);
-        link.click();
+  const name = certNameInput.value.trim();
+  if(!name) return;
+  html2canvas(document.querySelector('.certificate-container'),{scale:4}).then(canvas=>{
+    const link = document.createElement('a');
+    link.download=name.replace(/[^a-z0-9]/gi,'_')+'.jpg';
+    link.href=canvas.toDataURL('image/jpeg',1.0);
+    link.click();
 
-        // mark as downloaded
-        downloaded.push(normalizeName(name));
-        localStorage.setItem('pmw25_downloaded',JSON.stringify(downloaded));
+    // mark as downloaded
+    downloaded.push(normalizeName(name));
+    localStorage.setItem('pmw25_downloaded',JSON.stringify(downloaded));
 
-        // show thank you message on same page
-        thankYouMsg.style.display = 'block';
+    // open fresh thank-you page
+    const ty = window.open('','_blank','width=500,height=300');
+    ty.document.write('<html><head><title></title><style>body{display:flex;justify-content:center;align-items:center;height:100vh;font-family:Poppins,sans-serif;background:#f3f3f3;margin:0;}h1{text-align:center;color:#007bff;}</style></head><body><h1>Thank you for participating PMW25!</h1></body></html>');
+    ty.document.close();
 
-        setTimeout(()=>{
-            thankYouMsg.style.display = 'none';
-            certificatePage.classList.remove('active');
-            validationPage.classList.add('active');
-        },3000);
-    });
+    certificatePage.classList.remove('active');
+    validationPage.classList.add('active');
+  });
 });
 </script>
 </body>
